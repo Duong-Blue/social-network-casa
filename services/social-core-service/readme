@@ -1,0 +1,17 @@
+Build docker image
+docker build -t <account>/mxhcasa:0.0.1 .
+
+Push docker image to Docker Hub
+docker image push <account>/mxhcasa:0.9.0
+
+Create network:
+docker network create mhxcasenet
+
+Start MySQL in devteria-network
+docker run --network mhxcasenet --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=Duy12345678@ -d mysql:8.0
+
+Run your application in devteria-network
+docker run --name mxhcasa --network mhxcasenet -p 8080:8080 -e DBMS_CONNECTION=jdbc:mysql://mysql:3306/testbase mxhcasa:0.0.1
+
+
+docker run --name mxhcasa -p 8080:8080 -e DBMS_CONNECTION=jdbc:mysql://172.17.0.2:3306/testbase mxhcasa:0.0.1

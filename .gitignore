@@ -1,0 +1,45 @@
+# dependencies
+node_modules/
+
+# AI / Agents
+.omo/
+.ai/
+.codegraph/
+
+# env / secrets
+.env
+.env.*
+*.pem
+*.jks
+*.p8
+*.p12
+*.key
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# cache
+.cache/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# MongoDB data
+data/
+services/communication-service/data/
+
+# Ignore agent rules
+AGENTS.md
+**/AGENTS.md

@@ -1,0 +1,160 @@
+services:
+
+  # ================================================================
+  # API Gateway – Nginx
+  # ================================================================
+  api-gateway:
+    image: nginx:1.27-alpine
+    container_name: api-gateway
+    ports:
+      - "8080:80"          # Toàn bộ traffic đi vào đây
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - social-core-service
+      - communication-service
+    networks:
+      - casa-network
+    restart: unless-stopped
+
+  # ================================================================
+  # Social Core Service – Spring Boot (Java 21)
+  # ================================================================
+  social-core-service:
+    build:
+      context: ../social-core-service
+      dockerfile: Dockerfile
+    container_name: social-core-service
+    environment:
+      DBMS_CONNECTION: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      DBMS_USERNAME:   root
+      DBMS_PASSWORD:   ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      CELEBRITY_THRESHOLD: 10000
+      NOTIFICATION_SERVICE_URL: http://communication-service:3000
+    ports:
+      - "8081:8080"        # Expose để debug trực tiếp nếu cần
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - casa-network
+    volumes:
+      - social_uploads:/app/uploads
+    restart: unless-stopped
+
+
+  # ================================================================
+  # Communication Service – NestJS (Node.js)
+  # ================================================================
+  communication-service:
+    build:
+      context: ../communication-service
+      dockerfile: Dockerfile
+    container_name: communication-service
+    env_file:
+      - ../communication-service/.env
+    environment:
+      MINIO_ENDPOINT: minio           
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb
+      - minio
+    networks:
+      - casa-network
+    restart: unless-stopped
+
+  # ================================================================
+  # MySQL – Database cho social-core-service
+  # ================================================================
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE:      ${MYSQL_DATABASE}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - casa-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ================================================================
+  # MongoDB – Database cho communication-service
+  # ================================================================
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - casa-network
+    restart: unless-stopped
+
+  # ================================================================
+  # MinIO – Object Storage cho communication-service
+  # ================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER:     ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"        # API endpoint
+      - "9001:9001"        # Web Console
+    volumes:
+      - minio_data:/data
+    networks:
+      - casa-network
+    restart: unless-stopped
+
+  # ================================================================
+  # Redis – Bộ nhớ đệm (Caching) cho social-core-service
+  # ================================================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - casa-network
+    restart: unless-stopped
+
+# ================================================================
+# Volumes dùng chung
+# ================================================================
+volumes:
+  mysql_data:
+  mongo_data:
+  minio_data:
+  social_uploads:
+  redis_data:
+
+# ================================================================
+# Network dùng chung – các container giao tiếp qua tên service
+# ================================================================
+networks:
+  casa-network:
+    driver: bridge
+
