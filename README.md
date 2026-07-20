@@ -5,7 +5,8 @@ Casa is a robust, full-stack microservice-based social media platform. It suppor
 *(Note: This repository adopts a monorepo structure separating frontend clients and microservices).*
 
 ## 🌟 Demo & Screenshots
-![Uploading Picture1.png…]()
+<p align="center"><img src="https://github.com/user-attachments/assets/cba64895-5ad5-476f-ba71-40d6b847e649" alt="Picture1" width="268"></p>
+
 
 ## 🏗 Architecture & Modules
 
